@@ -7,6 +7,8 @@ const WebSocket = require('ws');
 const app = express();
 const PORT = 3000;
 
+const DEFAULT_WELCOME_MESSAGE = `Hello, I amd your tourist guide in Asia! To start, tell me what is your perfect getaway and what would you like to experiment.`;
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }))
 // Serve static files from the "public" directory
@@ -22,11 +24,24 @@ app.all('/action', (req, res) => {
     res.send(twiml.toString());
 })
 
+app.post('/message', (req, res) => {
+
+    const twiml = new twilio.twiml.MessagingResponse();
+    console.log('MESSAGE', req.body);
+
+    twiml.message(`Thank you for reaching us!\n\nAt the moment this service isn't working. Please try again later.`)
+
+    res.contentType('application/xml');
+    res.send(twiml.toString());
+
+    // TODO: receive user message, check if exists on Segment and run the bot
+    // TODO: save on database the chat history or the assistant conversation id
+
+});
+
 app.all('/welcome', (req, res) => {
     
-    // console.log('**********************************************************************')
-    // console.log('REQ', req)
-    // console.log('**********************************************************************\n\n\n\n\n\n')
+    console.log('CALL', req.body);
 
     // req.body
     // {
@@ -53,28 +68,29 @@ app.all('/welcome', (req, res) => {
     });
     const conversationRelay = connect.conversationRelay({
         url: `wss://${req.headers.host}/websocket`,
+        welcomeGreeting: DEFAULT_WELCOME_MESSAGE,
+        // ttsProvider: 'ElevenLabs',
+        // voice: 'e5WNhrdI30aXpS2RSGm1', //UgBBYS2sOqTuMpoF3BR0
 
-        welcomeGreeting: `Hello, I amd your assistant! Ask me anything!`,
-        // // ttsProvider: 'ElevenLabs',
-        // // voice: 'e5WNhrdI30aXpS2RSGm1', //UgBBYS2sOqTuMpoF3BR0
-        // interruptible: 'any',
-        // dtmfDetection: true,
-        // welcomeGreetingInterruptible: 'none',
-    });
-    conversationRelay.language({
-        code: 'pt-BR',
-        ttsProvider: 'ElevenLabs',
-        voice: 'CstacWqMhJQlnfLPxRG4',
-        transcriptionProvider: 'google',
-        speechModel: 'telephony',
-        transcriptionProvider: 'Google'
-
+        interruptible: 'any',
+        dtmfDetection: true,
+        welcomeGreetingInterruptible: 'none',
     });
     // conversationRelay.language({
-    //     code: 'en-US',
-    //     ttsProvider: 'google',
-    //     voice: 'en-US-Journey-O'
+    //     code: 'pt-BR',
+    //     ttsProvider: 'ElevenLabs',
+    //     voice: 'CstacWqMhJQlnfLPxRG4',
+    //     transcriptionProvider: 'google',
+    //     speechModel: 'telephony',
+    //     transcriptionProvider: 'Google'
     // });
+    conversationRelay.language({
+        code: 'en-US',
+        ttsProvider: 'google',
+        voice: 'en-US-Journey-O',
+        speechModel: 'telephony',
+        transcriptionProvider: 'Google'
+    });
 
     res.contentType('application/xml');
     res.send(twiml.toString());
