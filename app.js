@@ -3,6 +3,7 @@ const path = require('path');
 const twilio = require('twilio');
 const http = require('http');
 const WebSocket = require('ws');
+const ChatGPTAssistant = require('./chatgptAssistant');
 
 const app = express();
 const PORT = 3000;
@@ -102,83 +103,75 @@ const wss = new WebSocket.Server({ server, path: '/websocket' });
 
 wss.on('connection', (ws, req) => {
     console.log('WebSocket client connected', req.url);
+    let phoneNumber = null;
+    let whatsappNumber = null;
 
-    ws.on('message', (data) => {
-        // console.log('Received:', message.toString());
-        // Echo the message back or handle as needed
-        // ws.send(`Server received: ${message}`);
+    // Cria uma nova instância do assistant para cada conexão
+    const assistant = new ChatGPTAssistant();
+    assistant.createThread();
 
+    // Escuta o evento send_whatsapp
+    assistant.on('send_whatsapp', (args) => {
+        // Aqui você pode implementar o envio real ou apenas logar
+        console.log('Sending WhatsApp message', args);
+        // ws.send(JSON.stringify({
+        //     type: 'send_whatsapp',
+        //     ...args
+        // }));
+    });
+
+    ws.on('message', async (data) => {
         const message = JSON.parse(data);
         console.log('MESSAGE', message);
-        console.log('\n\n\n');
         switch(message.type) {
             case 'setup':
-                // {
-                //     type: 'setup',
-                //     sessionId: 'VX60d6e8fc6bc9fb58fcbec1e2b763f617',
-                //     callSid: 'CA25d366612c544c2dc45a5686ca453329',
-                //     parentCallSid: '',
-                //     from: 'whatsapp:+5511983370955',
-                //     to: 'whatsapp:+5511933058313',
-                //     forwardedFrom: '',
-                //     callerName: '',
-                //     direction: 'inbound',
-                //     callType: 'WHATSAPP',
-                //     callStatus: 'RINGING',
-                //     accountSid: 'AC04af808544efb60e1efdb39742839c50',
-                //     applicationSid: 'AP364a8771f81d7c2a70dfeffb35bfa2dc',
-                //     customParameters: {}
-                // }
+                if (message.from.indexOf('whatsapp:') >= 0) {
+                    phoneNumber = message.from.split('whatsapp:').join('');
+                    whatsappNumber = message.from;
+                }
                 break;
 
             case 'interrupt':
+                await assistant.interrupt();
                 break;
 
             case 'prompt':
-                // {
-                //     type: 'prompt',
-                //     voicePrompt: ' It is working.',
-                //     lang: 'en-US',
-                //     last: true
-                // }
+                try {
+                    const response = await assistant.sendMessage(message.voicePrompt);
 
-                if (message.voicePrompt.toLowerCase().indexOf('portuguese') >= 0) {
-                    ws.send(JSON.stringify({
-                        "type": "language",
-                        "ttsLanguage": "pt-BR",
-                        "transcriptionLanguage": "pt-BR"
-                    }));
-                    ws.send(JSON.stringify({
-                        "type": "text",
-                        "token": `Sim, eu posso falar em Português`,
-                        "last": true
-                    }));
+                    if (response.functionCalls && response.functionCalls.length > 0) {
+                        for (const call of response.functionCalls) {
+                            if (call.function.name === 'change_language') {
+                                const args = JSON.parse(call.function.arguments);
+                                ws.send(JSON.stringify({
+                                    type: "language",
+                                    ttsLanguage: args.ttsLanguage,
+                                    transcriptionLanguage: args.transcriptionLanguage
+                                }));
+                                ws.send(JSON.stringify({
+                                    type: "text",
+                                    token: args.ttsLanguage === 'pt-BR'
+                                        ? "Sim, eu posso falar em Português"
+                                        : "Yes, we can talk in English!",
+                                    last: true
+                                }));
+                                return;
+                            }
+                        }
+                    }
 
-                    return;
+                    ws.send(JSON.stringify({
+                        type: 'text',
+                        token: response.text,
+                        last: true
+                    }));
+                } catch (err) {
+                    ws.send(JSON.stringify({
+                        type: 'text',
+                        token: 'Sorry, there was an error processing your request.',
+                        last: true
+                    }));
                 }
-                if (message.voicePrompt.toLowerCase().indexOf('inglês') >= 0) {
-                    ws.send(JSON.stringify({
-                        "type": "language",
-                        "ttsLanguage": "en-US",
-                        "transcriptionLanguage": "en-US"
-                    }));
-                    ws.send(JSON.stringify({
-                        "type": "text",
-                        "token": `Yes, we can talk in English!`,
-                        "last": true
-                    }));
-
-                    return;
-                }
-
-                const newData = {
-                    "type": "text",
-                    "token": message.voicePrompt,
-                    "last": true
-                }
-
-                ws.send(JSON.stringify(newData));
-
                 break;
             case 'dtmf':
 
@@ -204,14 +197,12 @@ wss.on('connection', (ws, req) => {
 
                 break;
         }
-
     });
 
     ws.on('close', () => {
         console.log('WebSocket client disconnected');
+        assistant.closeThread();
     });
-
-    // ws.send('Welcome to the WebSocket server!');
 });
 // --- End WebSocket server setup ---
 
