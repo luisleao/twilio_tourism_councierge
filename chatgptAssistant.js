@@ -1,3 +1,6 @@
+require("dotenv").config();
+
+
 const { OpenAI } = require('openai');
 const EventEmitter = require('events');
 
