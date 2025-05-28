@@ -1,0 +1,205 @@
+const express = require('express');
+const path = require('path');
+const twilio = require('twilio');
+const http = require('http');
+const WebSocket = require('ws');
+
+const app = express();
+const PORT = 3000;
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }))
+// Serve static files from the "public" directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.all('/action', (req, res) => {
+    const twiml = new twilio.twiml.VoiceResponse();
+    twiml.say(
+        { voice: 'Google.am-ET-Wavenet-B'},
+        `Thank you for trying this demo!`
+    );
+    res.contentType('application/xml');
+    res.send(twiml.toString());
+})
+
+app.all('/welcome', (req, res) => {
+    
+    // console.log('**********************************************************************')
+    // console.log('REQ', req)
+    // console.log('**********************************************************************\n\n\n\n\n\n')
+
+    // req.body
+    // {
+    //     ApplicationSid: 'AP364a8771f81d7c2a70dfeffb35bfa2dc',
+    //     ApiVersion: '2010-04-01',
+    //     Called: 'whatsapp:+5511933058313',
+    //     Caller: 'whatsapp:+5511983370955',
+    //     CallStatus: 'ringing',
+    //     From: 'whatsapp:+5511983370955',
+    //     CallSid: 'CAfa945c89dae51f52488bb622a311e08e',
+    //     To: 'whatsapp:+5511933058313',
+    //     Direction: 'inbound',
+    //     AccountSid: 'AC04af808544efb60e1efdb39742839c50'
+    // }
+
+    // TODO: check req.body.From if starts with "whatsapp:"
+    //       if true, get the data from Segment and change the welcome message, add params on ConversationRelay
+
+
+    const twiml = new twilio.twiml.VoiceResponse();
+    twiml.connect()
+    const connect = twiml.connect({
+        action: `https://${req.headers.host}/action`
+    });
+    const conversationRelay = connect.conversationRelay({
+        url: `wss://${req.headers.host}/websocket`,
+
+        welcomeGreeting: `Hello, I amd your assistant! Ask me anything!`,
+        // // ttsProvider: 'ElevenLabs',
+        // // voice: 'e5WNhrdI30aXpS2RSGm1', //UgBBYS2sOqTuMpoF3BR0
+        // interruptible: 'any',
+        // dtmfDetection: true,
+        // welcomeGreetingInterruptible: 'none',
+    });
+    conversationRelay.language({
+        code: 'pt-BR',
+        ttsProvider: 'ElevenLabs',
+        voice: 'CstacWqMhJQlnfLPxRG4',
+        transcriptionProvider: 'google',
+        speechModel: 'telephony',
+        transcriptionProvider: 'Google'
+
+    });
+    // conversationRelay.language({
+    //     code: 'en-US',
+    //     ttsProvider: 'google',
+    //     voice: 'en-US-Journey-O'
+    // });
+
+    res.contentType('application/xml');
+    res.send(twiml.toString());
+})
+
+// --- WebSocket server setup ---
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server, path: '/websocket' });
+
+wss.on('connection', (ws, req) => {
+    console.log('WebSocket client connected', req.url);
+
+    ws.on('message', (data) => {
+        // console.log('Received:', message.toString());
+        // Echo the message back or handle as needed
+        // ws.send(`Server received: ${message}`);
+
+        const message = JSON.parse(data);
+        console.log('MESSAGE', message);
+        console.log('\n\n\n');
+        switch(message.type) {
+            case 'setup':
+                // {
+                //     type: 'setup',
+                //     sessionId: 'VX60d6e8fc6bc9fb58fcbec1e2b763f617',
+                //     callSid: 'CA25d366612c544c2dc45a5686ca453329',
+                //     parentCallSid: '',
+                //     from: 'whatsapp:+5511983370955',
+                //     to: 'whatsapp:+5511933058313',
+                //     forwardedFrom: '',
+                //     callerName: '',
+                //     direction: 'inbound',
+                //     callType: 'WHATSAPP',
+                //     callStatus: 'RINGING',
+                //     accountSid: 'AC04af808544efb60e1efdb39742839c50',
+                //     applicationSid: 'AP364a8771f81d7c2a70dfeffb35bfa2dc',
+                //     customParameters: {}
+                // }
+                break;
+
+            case 'interrupt':
+                break;
+
+            case 'prompt':
+                // {
+                //     type: 'prompt',
+                //     voicePrompt: ' It is working.',
+                //     lang: 'en-US',
+                //     last: true
+                // }
+
+                if (message.voicePrompt.toLowerCase().indexOf('portuguese') >= 0) {
+                    ws.send(JSON.stringify({
+                        "type": "language",
+                        "ttsLanguage": "pt-BR",
+                        "transcriptionLanguage": "pt-BR"
+                    }));
+                    ws.send(JSON.stringify({
+                        "type": "text",
+                        "token": `Sim, eu posso falar em Português`,
+                        "last": true
+                    }));
+
+                    return;
+                }
+                if (message.voicePrompt.toLowerCase().indexOf('inglês') >= 0) {
+                    ws.send(JSON.stringify({
+                        "type": "language",
+                        "ttsLanguage": "en-US",
+                        "transcriptionLanguage": "en-US"
+                    }));
+                    ws.send(JSON.stringify({
+                        "type": "text",
+                        "token": `Yes, we can talk in English!`,
+                        "last": true
+                    }));
+
+                    return;
+                }
+
+                const newData = {
+                    "type": "text",
+                    "token": message.voicePrompt,
+                    "last": true
+                }
+
+                ws.send(JSON.stringify(newData));
+
+                break;
+            case 'dtmf':
+
+                // {
+                //     "type": "play",
+                //     "source": "https://api.twilio.com/cowbell.mp3",
+                //     "loop": 1,
+                //     "preemptible": false
+                // }
+
+                // {
+                //     "type": "sendDigits",
+                //     "digits": "9www4085551212"
+                // }
+
+
+                // {
+                //     "type": "language",
+                //     "ttsLanguage": "sv-SE",
+                //     "transcriptionLanguage": "en-US"
+                // }
+
+
+                break;
+        }
+
+    });
+
+    ws.on('close', () => {
+        console.log('WebSocket client disconnected');
+    });
+
+    // ws.send('Welcome to the WebSocket server!');
+});
+// --- End WebSocket server setup ---
+
+server.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}/`);
+});
+

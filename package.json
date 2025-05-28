@@ -1,0 +1,28 @@
+{
+  "name": "twilio_tourism_councierge",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "cross-env NODE_ENV=production node app.js",
+
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luisleao/twilio_tourism_councierge.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/luisleao/twilio_tourism_councierge/issues"
+  },
+  "homepage": "https://github.com/luisleao/twilio_tourism_councierge#readme",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "twilio": "^5.6.1",
+    "ws": "^8.18.2"
+  }
+}
