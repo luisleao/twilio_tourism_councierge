@@ -26,14 +26,10 @@ class ChatGPTAssistant extends EventEmitter {
         this.threadId = thread.id;
 
         // Adiciona mensagem de sistema com o número do participante, se houver
-        let systemMsg = null;
         if (this.phoneNumber) {
-            systemMsg = `The user's phone number is ${this.phoneNumber}.`;
-        }
-        if (systemMsg) {
             await this.openai.beta.threads.messages.create(this.threadId, {
-                role: 'system',
-                content: systemMsg,
+                role: 'assistant',
+                content: `The user's phone number is ${this.phoneNumber}.`,
             });
         }
 

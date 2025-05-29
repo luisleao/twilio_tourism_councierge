@@ -76,7 +76,7 @@ app.all('/welcome', (req, res) => {
         case 'whatsapp': //whatsapp:+5511234567890
             // TODO: gather user data from Segment. Inject into the assistant directly.
             // .split('').join(' ')
-            const firstName = req.body.From.split('whatsapp:').join('');
+            const firstName = 'WhatsApp User'; //req.body.From.split('whatsapp:').join('');
             welcomeGreeting = messages.call_whatsapp.split('{{firstname}}').join(firstName);
             break;
         default:
@@ -157,7 +157,7 @@ wss.on('connection', (ws, req) => {
             // messagingServiceSid: WHATSAPP_MESSAGE_SERVICE_SID, 
             to: `whatsapp:${args.to}`,
             ContentVariables: JSON.stringify({ 
-                "1": args.recommendation
+                "1": args.recommendation.toString()
             })
         };
 
