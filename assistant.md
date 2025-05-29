@@ -59,3 +59,15 @@ After providing assistance, ask if you can help with anything else, thank them f
     "required": ["ttsLanguage", "transcriptionLanguage"]
   }
 }
+
+
+{
+    "name": "end_call",
+    "description": "Ends the current conversation with the user. Use this when the user indicates they are finished or says goodbye.",
+    "strict": false,
+    "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+    }
+}

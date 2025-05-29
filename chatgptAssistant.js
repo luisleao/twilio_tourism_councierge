@@ -13,11 +13,30 @@ class ChatGPTAssistant extends EventEmitter {
         this.assistantId = process.env.OPENAI_ASSISTANT_ID;
         this.threadId = null;
         this.currentRunId = null;
+        this.phoneNumber = null;
     }
+
+    setPhoneNumber(phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
 
     async createThread() {
         const thread = await this.openai.beta.threads.create();
         this.threadId = thread.id;
+
+        // Adiciona mensagem de sistema com o número do participante, se houver
+        let systemMsg = null;
+        if (this.phoneNumber) {
+            systemMsg = `The user's phone number is ${this.phoneNumber}.`;
+        }
+        if (systemMsg) {
+            await this.openai.beta.threads.messages.create(this.threadId, {
+                role: 'system',
+                content: systemMsg,
+            });
+        }
+
         return this.threadId;
     }
 
@@ -45,24 +64,45 @@ class ChatGPTAssistant extends EventEmitter {
                 const toolCalls = runResult.required_action.submit_tool_outputs.tool_calls;
                 const toolOutputs = [];
                 for (const call of toolCalls) {
-                    if (call.function.name === 'send_whatsapp') {
-                        let args;
-                        try {
-                            args = JSON.parse(call.function.arguments);
-                        } catch {
-                            args = call.function.arguments;
-                        }
-                        this.emit('send_whatsapp', args);
-                        toolOutputs.push({
-                            tool_call_id: call.id,
-                            output: JSON.stringify({ status: 'sent' })
-                        });
-                    }
-                    if (call.function.name === 'change_language') {
-                        toolOutputs.push({
-                            tool_call_id: call.id,
-                            output: call.function.arguments
-                        });
+                    let args;
+                    switch (call.function.name) {
+                        case 'send_whatsapp':
+                            try {
+                                args = JSON.parse(call.function.arguments);
+                            } catch {
+                                args = call.function.arguments;
+                            }
+                            this.emit('send_whatsapp', args);
+                            toolOutputs.push({
+                                tool_call_id: call.id,
+                                output: JSON.stringify({ status: 'sent' })
+                            });
+                            break;
+                        case 'change_language':
+                            toolOutputs.push({
+                                tool_call_id: call.id,
+                                output: call.function.arguments
+                            });
+                            break;
+                        case 'end_call':
+                            try {
+                                args = JSON.parse(call.function.arguments);
+                            } catch {
+                                args = call.function.arguments;
+                            }
+                            this.emit('end_call', args);
+                            toolOutputs.push({
+                                tool_call_id: call.id,
+                                output: JSON.stringify({ status: 'ended' })
+                            });
+                            break;
+                        default:
+                            // Optionally handle unknown functions
+                            toolOutputs.push({
+                                tool_call_id: call.id,
+                                output: JSON.stringify({ error: 'Unknown function' })
+                            });
+                            break;
                     }
                 }
                 await this.openai.beta.threads.runs.submitToolOutputs(this.threadId, run.id, {

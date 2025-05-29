@@ -1,19 +1,24 @@
+require("dotenv").config();
+
 const express = require('express');
 const path = require('path');
 const twilio = require('twilio');
 const http = require('http');
 const WebSocket = require('ws');
 const ChatGPTAssistant = require('./chatgptAssistant');
+const fs = require('fs');
 
 const app = express();
 const PORT = 3000;
 
-const DEFAULT_WELCOME_MESSAGE = `Hello, I amd your tourist guide in Asia! To start, tell me what is your perfect getaway and what would you like to experiment.`;
+const messages = JSON.parse(fs.readFileSync(path.join(__dirname, 'messages.json'), 'utf8'));
+const DEFAULT_WELCOME_MESSAGE = messages.welcome_wired || `Hello, I amd your tourist guide in Asia! To start, tell me what is your perfect getaway and what would you like to experiment.`;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }))
+
 // Serve static files from the "public" directory
-app.use(express.static(path.join(__dirname, 'public')));
+// app.use(express.static(path.join(__dirname, 'public')));
 
 app.all('/action', (req, res) => {
     const twiml = new twilio.twiml.VoiceResponse();
@@ -58,8 +63,29 @@ app.all('/welcome', (req, res) => {
     //     AccountSid: 'AC04af808544efb60e1efdb39742839c50'
     // }
 
-    // TODO: check req.body.From if starts with "whatsapp:"
-    //       if true, get the data from Segment and change the welcome message, add params on ConversationRelay
+
+    let welcomeGreeting = '';
+
+    switch(req.body.From.toLowerCase().split(':')[0]) {
+        case 'sip': //sip:0@twilioartemis.sip.twilio.com
+            welcomeGreeting = messages.call_wired;
+            break;
+        case 'whatsapp': //whatsapp:+5511234567890
+            // TODO: gather user data from Segment. Inject into the assistant directly.
+            // .split('').join(' ')
+            const firstName = req.body.From.split('whatsapp:').join('');
+            welcomeGreeting = messages.call_whatsapp.split('{{firstname}}').join(firstName);
+            break;
+        default:
+            welcomeGreeting = `Hello! I can't identify from where you are calling to this number. Please try again later!`;
+    }
+
+    
+
+    if (req.body.From.indexOf('whatsapp:') >= 0) {
+        // TODO: check req.body.From if starts with "whatsapp:"
+        //       if true, get the data from Segment and change the welcome message, add params on ConversationRelay
+    }
 
 
     const twiml = new twilio.twiml.VoiceResponse();
@@ -69,13 +95,13 @@ app.all('/welcome', (req, res) => {
     });
     const conversationRelay = connect.conversationRelay({
         url: `wss://${req.headers.host}/websocket`,
-        welcomeGreeting: DEFAULT_WELCOME_MESSAGE,
-        // ttsProvider: 'ElevenLabs',
-        // voice: 'e5WNhrdI30aXpS2RSGm1', //UgBBYS2sOqTuMpoF3BR0
-
+        welcomeGreeting,
         interruptible: 'any',
         dtmfDetection: true,
         welcomeGreetingInterruptible: 'none',
+
+        // ttsProvider: 'ElevenLabs',
+        // voice: 'e5WNhrdI30aXpS2RSGm1', //UgBBYS2sOqTuMpoF3BR0
     });
     // conversationRelay.language({
     //     code: 'pt-BR',
@@ -102,15 +128,12 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, path: '/websocket' });
 
 wss.on('connection', (ws, req) => {
-    console.log('WebSocket client connected', req.url);
     let phoneNumber = null;
     let whatsappNumber = null;
 
-    // Cria uma nova instância do assistant para cada conexão
     const assistant = new ChatGPTAssistant();
-    assistant.createThread();
 
-    // Escuta o evento send_whatsapp
+    // Listen send_whatsapp event
     assistant.on('send_whatsapp', (args) => {
         // Aqui você pode implementar o envio real ou apenas logar
         console.log('Sending WhatsApp message', args);
@@ -120,15 +143,31 @@ wss.on('connection', (ws, req) => {
         // }));
     });
 
+    // Listen end_call event
+    assistant.on('end_call', (args) => {
+        // Aqui você pode implementar o envio real ou apenas logar
+        console.log('Sending WhatsApp message', args);
+        ws.send(JSON.stringify(
+            {
+                "type": "end",
+                "handoffData": "{\"reasonCode\":\"user-ended\"}"
+            }
+        ));
+    });
+
+
     ws.on('message', async (data) => {
         const message = JSON.parse(data);
-        console.log('MESSAGE', message);
         switch(message.type) {
             case 'setup':
                 if (message.from.indexOf('whatsapp:') >= 0) {
                     phoneNumber = message.from.split('whatsapp:').join('');
                     whatsappNumber = message.from;
+                    assistant.setPhoneNumber(phoneNumber);
+                    assistant.setWhatsappNumber(whatsappNumber);
                 }
+                // Crie a thread após definir os números
+                await assistant.createThread();
                 break;
 
             case 'interrupt':
@@ -194,6 +233,11 @@ wss.on('connection', (ws, req) => {
                 //     "transcriptionLanguage": "en-US"
                 // }
 
+
+                // {
+                //     "type": "end",
+                //     "handoffData": "{\"reasonCode\":\"live-agent-handoff\", \"reason\": \"The caller wants to talk to a real person\"}"
+                // }
 
                 break;
         }
