@@ -14,6 +14,9 @@ const PORT = 3000;
 const messages = JSON.parse(fs.readFileSync(path.join(__dirname, 'messages.json'), 'utf8'));
 const DEFAULT_WELCOME_MESSAGE = messages.welcome_wired || `Hello, I amd your tourist guide in Asia! To start, tell me what is your perfect getaway and what would you like to experiment.`;
 
+const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, WHATSAPP_FROM_NUMBER, WHATSAPP_TEMPLATE_DEMO_SID } = process.env;
+
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }))
 
@@ -22,10 +25,10 @@ app.use(express.urlencoded({ extended: true }))
 
 app.all('/action', (req, res) => {
     const twiml = new twilio.twiml.VoiceResponse();
-    twiml.say(
-        { voice: 'Google.am-ET-Wavenet-B'},
-        `Thank you for trying this demo!`
-    );
+    // twiml.say(
+    //     { voice: 'Google.am-ET-Wavenet-B'},
+    //     `Thank you for trying this demo!`
+    // );
     res.contentType('application/xml');
     res.send(twiml.toString());
 })
@@ -97,9 +100,9 @@ app.all('/welcome', (req, res) => {
         url: `wss://${req.headers.host}/websocket`,
         welcomeGreeting,
         interruptible: 'any',
-        dtmfDetection: true,
+        welcomeGreetingInterruptible: 'any',
+        dtmfDetection: false,
         welcomeGreetingInterruptible: 'none',
-
         // ttsProvider: 'ElevenLabs',
         // voice: 'e5WNhrdI30aXpS2RSGm1', //UgBBYS2sOqTuMpoF3BR0
     });
@@ -111,12 +114,19 @@ app.all('/welcome', (req, res) => {
     //     speechModel: 'telephony',
     //     transcriptionProvider: 'Google'
     // });
+    // conversationRelay.language({
+    //     code: 'en-US',
+    //     ttsProvider: 'google',
+    //     voice: 'en-US-Journey-O',
+    //     speechModel: 'telephony',
+    //     transcriptionProvider: 'Google'
+    // });
     conversationRelay.language({
         code: 'en-US',
-        ttsProvider: 'google',
-        voice: 'en-US-Journey-O',
-        speechModel: 'telephony',
-        transcriptionProvider: 'Google'
+        ttsProvider: 'ElevenLabs',
+        voice: 'CstacWqMhJQlnfLPxRG4',
+        speechModel: 'nova-2-general',
+        transcriptionProvider: 'Deepgram'
     });
 
     res.contentType('application/xml');
@@ -134,9 +144,28 @@ wss.on('connection', (ws, req) => {
     const assistant = new ChatGPTAssistant();
 
     // Listen send_whatsapp event
-    assistant.on('send_whatsapp', (args) => {
+    assistant.on('send_whatsapp', async (args) => {
         // Aqui você pode implementar o envio real ou apenas logar
         console.log('Sending WhatsApp message', args);
+
+        const client = new twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+
+
+        const newMessage = {
+            from: WHATSAPP_FROM_NUMBER,
+            contentSid: WHATSAPP_TEMPLATE_DEMO_SID,
+            // messagingServiceSid: WHATSAPP_MESSAGE_SERVICE_SID, 
+            to: `whatsapp:${args.to}`,
+            ContentVariables: JSON.stringify({ 
+                "1": args.recommendation
+            })
+        };
+
+        console.log('SENDING...', newMessage);
+
+        await client.messages.create(newMessage).then(s => {
+            console.log('MESSAGE RETURN', s);
+        });   
         // ws.send(JSON.stringify({
         //     type: 'send_whatsapp',
         //     ...args
@@ -146,18 +175,28 @@ wss.on('connection', (ws, req) => {
     // Listen end_call event
     assistant.on('end_call', (args) => {
         // Aqui você pode implementar o envio real ou apenas logar
-        console.log('Sending WhatsApp message', args);
-        ws.send(JSON.stringify(
-            {
-                "type": "end",
-                "handoffData": "{\"reasonCode\":\"user-ended\"}"
-            }
-        ));
+        console.log('Ending Call', args);
+
+        // ws.send(JSON.stringify({
+        //     type: "text",
+        //     token: messages.ending_call,
+        //     last: true
+        // }));
+        setTimeout(()=>{
+            ws.send(JSON.stringify(
+                {
+                    "type": "end",
+                    "handoffData": "{\"reasonCode\":\"user-ended\"}"
+                }
+            ));
+        }, 2000);
     });
 
 
     ws.on('message', async (data) => {
         const message = JSON.parse(data);
+        console.log('DATA', message);
+
         switch(message.type) {
             case 'setup':
                 if (message.from.indexOf('whatsapp:') >= 0) {
@@ -249,7 +288,27 @@ wss.on('connection', (ws, req) => {
 });
 // --- End WebSocket server setup ---
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
     console.log(`Server running at http://localhost:${PORT}/`);
+
+        const client = new twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+
+        // const newMessage = {
+        //     from: WHATSAPP_FROM_NUMBER,
+        //     contentSid: WHATSAPP_TEMPLATE_DEMO_SID,
+        //     // messagingServiceSid: WHATSAPP_MESSAGE_SERVICE_SID, 
+        //     to: `whatsapp:+5511983370955`,
+        //     ContentVariables: JSON.stringify({ 
+        //         "1": "this is a test"
+        //     })
+        // };
+
+        // console.log('SENDING...', newMessage);
+
+        // await client.messages.create(newMessage).then(s => {
+        //     console.log('MESSAGE RETURN', s);
+        // });   
+
+
 });
 
