@@ -164,7 +164,6 @@ wss.on('connection', (ws, req) => {
                     phoneNumber = message.from.split('whatsapp:').join('');
                     whatsappNumber = message.from;
                     assistant.setPhoneNumber(phoneNumber);
-                    assistant.setWhatsappNumber(whatsappNumber);
                 }
                 // Crie a thread após definir os números
                 await assistant.createThread();
