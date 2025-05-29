@@ -2,7 +2,7 @@
     "call_wired": "Oh hello there, thank you for visiting us at NRF. I'm an AI bot to help craft personalised experiences on Asia, so please tell me what would be your perfect getaway and I will start from there.",
     "call_wired_old": "Oh hello there, we’re thrilled to have you here. At Twilio, we believe in creating personalised experiences that resonate with your unique preferences. If you’re dreaming of exploring Asia, let us help you craft the perfect itinerary.",
     "call_whatsapp": "Oh hello {{firstname}}, I'm here to support you with some advices and to create a personalized travel itineraty in Asia. Would you like to hear more?",
-    "ending_call": "Thank you for visiting our booth and hope you enjoy NRF Singapore!",
+    "ending_call": "Thank you for visiting our booth and hope you enjoy NRF Singapore! Goodbye!",
     "message_registered": "Hi {{firstname}}, are you ready to embark on an adventure? Here’s your personalised travel itinerary:\n\n{{itinerary}}\n\nSafe travels!\nThe Twilio Team",
     "message_unregistered": "Hi, it looks like you didn't set your preferences. Please access _______ and create your profile."
 }

@@ -177,19 +177,17 @@ wss.on('connection', (ws, req) => {
         // Aqui você pode implementar o envio real ou apenas logar
         console.log('Ending Call', args);
 
-        // ws.send(JSON.stringify({
-        //     type: "text",
-        //     token: messages.ending_call,
-        //     last: true
-        // }));
-        setTimeout(()=>{
-            ws.send(JSON.stringify(
-                {
-                    "type": "end",
-                    "handoffData": "{\"reasonCode\":\"user-ended\"}"
-                }
-            ));
-        }, 2000);
+        ws.send(JSON.stringify({
+            type: "text",
+            token: messages.ending_call,
+            last: true
+        }));
+        ws.send(JSON.stringify(
+            {
+                "type": "end",
+                "handoffData": "{\"reasonCode\":\"user-ended\"}"
+            }
+        ));
     });
 
 
@@ -291,7 +289,7 @@ wss.on('connection', (ws, req) => {
 server.listen(PORT, async () => {
     console.log(`Server running at http://localhost:${PORT}/`);
 
-        const client = new twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    // const client = new twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
 });
 
