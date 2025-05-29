@@ -156,8 +156,8 @@ wss.on('connection', (ws, req) => {
             contentSid: WHATSAPP_TEMPLATE_DEMO_SID,
             // messagingServiceSid: WHATSAPP_MESSAGE_SERVICE_SID, 
             to: `whatsapp:${args.to}`,
-            ContentVariables: JSON.stringify({ 
-                "1": args.recommendation.toString()
+            contentVariables: JSON.stringify({ 
+                "1": `${args.recommendation}`
             })
         };
 
@@ -292,23 +292,6 @@ server.listen(PORT, async () => {
     console.log(`Server running at http://localhost:${PORT}/`);
 
         const client = new twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-
-        // const newMessage = {
-        //     from: WHATSAPP_FROM_NUMBER,
-        //     contentSid: WHATSAPP_TEMPLATE_DEMO_SID,
-        //     // messagingServiceSid: WHATSAPP_MESSAGE_SERVICE_SID, 
-        //     to: `whatsapp:+5511983370955`,
-        //     ContentVariables: JSON.stringify({ 
-        //         "1": "this is a test"
-        //     })
-        // };
-
-        // console.log('SENDING...', newMessage);
-
-        // await client.messages.create(newMessage).then(s => {
-        //     console.log('MESSAGE RETURN', s);
-        // });   
-
 
 });
 
