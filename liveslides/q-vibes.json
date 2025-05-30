@@ -1,0 +1,54 @@
+{
+  "kind": "Question",
+  "options": [
+
+
+
+    {
+      "optionLabel": "Futuristic architecture",
+      "afterSubmitActions": [
+        {
+          "type": "Tally",
+          "answer": "Futuristic architecture"
+        },
+        {
+          "slideId": "Q-NATURE",
+          "type": "Slide"
+        },
+        {
+          "event": "CityVibes",
+          "type": "Track",
+          "properties": {
+            "city_vibes": "Futuristic architecture"
+          }
+        }
+      ],
+      "primary": false
+    },
+    {
+      "optionLabel": "Colonial charms",
+      "afterSubmitActions": [
+        {
+          "type": "Tally",
+          "answer": "Colonial charms"
+        },
+        {
+          "slideId": "Q-NATURE",
+          "type": "Slide"
+        },
+        {
+          "event": "CityVibes",
+          "type": "Track",
+          "properties": {
+            "city_vibes": "Colonial charms"
+          }
+        }
+      ],
+      "primary": false
+    }
+    
+  ],
+  "description": "Would you like to marvel at futuristic architecture or explore Singapore’s colonial charms",
+  "id": "Q-VIBES",
+  "title": "City Vibes"
+}

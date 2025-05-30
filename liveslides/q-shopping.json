@@ -1,0 +1,52 @@
+{
+  "kind": "Question",
+  "options": [
+
+    {
+      "optionLabel": "Luxury shopping malls",
+      "afterSubmitActions": [
+        {
+          "type": "Tally",
+          "answer": "Luxury shopping malls"
+        },
+        {
+          "slideId": "Q-VIBES",
+          "type": "Slide"
+        },
+        {
+          "event": "Shopping",
+          "type": "Track",
+          "properties": {
+            "shopping_preference": "Luxury shopping malls"
+          }
+        }
+      ],
+      "primary": false
+    },
+    {
+      "optionLabel": "Unique budget finds at local markets",
+      "afterSubmitActions": [
+        {
+          "type": "Tally",
+          "answer": "Unique budget finds at local markets"
+        },
+        {
+          "slideId": "Q-VIBES",
+          "type": "Slide"
+        },
+        {
+          "event": "Shopping",
+          "type": "Track",
+          "properties": {
+            "shopping_preference": "Unique budget finds at local markets"
+          }
+        }
+      ],
+      "primary": false
+    }
+    
+  ],
+  "description": "Would you prefer to shop at luxury shopping malls or discover unique budget finds at local markets?",
+  "id": "Q-SHOPPING",
+  "title": "Shopping Preference"
+}

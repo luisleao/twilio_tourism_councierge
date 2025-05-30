@@ -1,0 +1,55 @@
+{
+  "kind": "Question",
+  "options": [
+
+    
+
+
+    {
+      "optionLabel": "Traditional hawker fare",
+      "afterSubmitActions": [
+        {
+          "type": "Tally",
+          "answer": "Traditional hawker fare"
+        },
+        {
+          "slideId": "Q-SHOPPING",
+          "type": "Slide"
+        },
+        {
+          "event": "Dining",
+          "type": "Track",
+          "properties": {
+            "dining_style": "Traditional hawker fare"
+          }
+        }
+      ],
+      "primary": false
+    },
+    {
+      "optionLabel": "Modern fusion dining experience",
+      "afterSubmitActions": [
+        {
+          "type": "Tally",
+          "answer": "Modern fusion dining experience"
+        },
+        {
+          "slideId": "Q-SHOPPING",
+          "type": "Slide"
+        },
+        {
+          "event": "Dining",
+          "type": "Track",
+          "properties": {
+            "dining_style": "Modern fusion dining experience"
+          }
+        }
+      ],
+      "primary": false
+    }
+    
+  ],
+  "description": "Are you in the mood for traditional hawker fare, or a modern fusion dining experience?",
+  "id": "Q-DINING",
+  "title": "Dining Style"
+}

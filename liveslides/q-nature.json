@@ -1,0 +1,52 @@
+{
+  "kind": "Question",
+  "options": [
+
+    {
+      "optionLabel": "Nature",
+      "afterSubmitActions": [
+        {
+          "type": "Tally",
+          "answer": "Nature"
+        },
+        {
+          "slideId": "GATE",
+          "type": "Slide"
+        },
+        {
+          "event": "Nature vs Comfort",
+          "type": "Track",
+          "properties": {
+            "nature_or_confort": "Nature"
+          }
+        }
+      ],
+      "primary": false
+    },
+    {
+      "optionLabel": "Air-conditioning please",
+      "afterSubmitActions": [
+        {
+          "type": "Tally",
+          "answer": "Air-conditioning please"
+        },
+        {
+          "slideId": "GATE",
+          "type": "Slide"
+        },
+        {
+          "event": "Nature vs Comfort",
+          "type": "Track",
+          "properties": {
+            "nature_or_confort": "Air-conditioning please"
+          }
+        }
+      ],
+      "primary": false
+    }
+    
+  ],
+  "description": "Do you enjoy nature or do you prefer to be in air-conditioning?",
+  "id": "Q-NATURE",
+  "title": "Nature vs Comfort"
+}

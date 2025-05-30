@@ -1,0 +1,23 @@
+{
+  "kind": "Identify",
+  "description": "",
+  "afterSubmitActions": [
+    {
+      "slideId": "AFTER-GATE",
+      "type": "Slide"
+    },
+    {
+      "event": "Identify",
+      "type": "Identify",
+      "properties": {
+        "demo": "NRFSINGAPORE"
+      }
+    },
+    {
+      "type": "Stream",
+      "message": "Ahoy ${name}"
+    }
+  ],
+  "id": "GATE",
+  "title": "Tell us about yourself"
+}
