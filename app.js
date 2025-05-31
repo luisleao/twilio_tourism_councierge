@@ -36,12 +36,45 @@ app.all('/action', (req, res) => {
     res.send(twiml.toString());
 })
 
-app.post('/message', (req, res) => {
+app.post('/message', async (req, res) => {
 
     const twiml = new twilio.twiml.MessagingResponse();
     console.log('MESSAGE', req.body);
 
-    twiml.message(`Thank you for reaching us!\n\nAt the moment this service isn't working. Please try again later.`)
+
+    phoneNumber = req.body.From.split('whatsapp:').join('');
+
+    const userTraits = await fetchUserTraits(encodeURIComponent(phoneNumber));
+    console.log('userTraits', userTraits);
+
+    if (userTraits) {
+        const firstName = userTraits.name ? userTraits.name.split(' ')[0] : '';
+        const welcome = messages.call_whatsapp.split('{{firstname}}').join(firstName);
+        
+        twiml.message(`Hi ${firstName}! It looks like I've your profile and preferences.\n\nTo interact with me and receive my recommendations, please click on the call button here or click on my number below.\n\n+5511933058313`.split('  ').join(' '));
+
+        // TODO: change to content message with call button
+        // const client = new twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+        // const newMessage = {
+        //     from: WHATSAPP_FROM_NUMBER,
+        //     contentSid: WHATSAPP_TEMPLATE_DEMO_SID,
+        //     // messagingServiceSid: WHATSAPP_MESSAGE_SERVICE_SID, 
+        //     to: `whatsapp:${args.to}`,
+        //     contentVariables: JSON.stringify({ 
+        //         "1": `${args.recommendation}`
+        //     })
+        // };
+
+        // console.log('SENDING...', newMessage);
+        // await client.messages.create(newMessage).then(s => {
+        //     console.log('MESSAGE RETURN', s);
+        // });   
+
+
+    } else {
+        twiml.message(`Greetings from NRF Singapore!\n\nIf you want to start interacting with me, please open the link https://twilio.world?pid=8XBTZ`)
+    }
+
 
     res.contentType('application/xml');
     res.send(twiml.toString());
@@ -152,7 +185,6 @@ wss.on('connection', (ws, req) => {
 
         const client = new twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
-
         const newMessage = {
             from: WHATSAPP_FROM_NUMBER,
             contentSid: WHATSAPP_TEMPLATE_DEMO_SID,
@@ -205,10 +237,8 @@ wss.on('connection', (ws, req) => {
 
                 
                 if (message.from.indexOf('whatsapp:') >= 0) {
-                    phoneNumber = '+5511933058313'; //message.from.split('whatsapp:').join('');
+                    phoneNumber = message.from.split('whatsapp:').join('');
                     assistant.setPhoneNumber(phoneNumber);
-
-
                     const userTraits = await fetchUserTraits(encodeURIComponent(phoneNumber));
                     console.log('userTraits', userTraits);
 
