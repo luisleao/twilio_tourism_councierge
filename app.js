@@ -15,6 +15,9 @@ const messages = JSON.parse(fs.readFileSync(path.join(__dirname, 'messages.json'
 const DEFAULT_WELCOME_MESSAGE = messages.welcome_wired || `Hello, I amd your tourist guide in Asia! To start, tell me what is your perfect getaway and what would you like to experiment.`;
 
 const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, WHATSAPP_FROM_NUMBER, WHATSAPP_TEMPLATE_DEMO_SID } = process.env;
+const { SEGMENT_WRITE_KEY, SEGMENT_SPACE_ID, SEGMENT_ACCESS_TOKEN } = process.env;
+
+const { fetchUserTraits, fetchUser } = require('./utils/segment');
 
 
 app.use(express.json());
@@ -77,7 +80,7 @@ app.all('/welcome', (req, res) => {
             // TODO: gather user data from Segment. Inject into the assistant directly.
             // .split('').join(' ')
             const firstName = 'WhatsApp User'; //req.body.From.split('whatsapp:').join('');
-            welcomeGreeting = messages.call_whatsapp.split('{{firstname}}').join(firstName);
+            welcomeGreeting = ''; //messages.call_whatsapp.split('{{firstname}}').join(firstName);
             break;
         default:
             welcomeGreeting = `Hello! I can't identify from where you are calling to this number. Please try again later!`;
@@ -139,8 +142,7 @@ const wss = new WebSocket.Server({ server, path: '/websocket' });
 
 wss.on('connection', (ws, req) => {
     let phoneNumber = null;
-    let whatsappNumber = null;
-
+ 
     const assistant = new ChatGPTAssistant();
 
     // Listen send_whatsapp event
@@ -197,13 +199,56 @@ wss.on('connection', (ws, req) => {
 
         switch(message.type) {
             case 'setup':
-                if (message.from.indexOf('whatsapp:') >= 0) {
-                    phoneNumber = message.from.split('whatsapp:').join('');
-                    whatsappNumber = message.from;
-                    assistant.setPhoneNumber(phoneNumber);
-                }
+
                 // Crie a thread após definir os números
                 await assistant.createThread();
+
+                
+                if (message.from.indexOf('whatsapp:') >= 0) {
+                    phoneNumber = '+5511933058313'; //message.from.split('whatsapp:').join('');
+                    assistant.setPhoneNumber(phoneNumber);
+
+
+                    const userTraits = await fetchUserTraits(encodeURIComponent(phoneNumber));
+                    console.log('userTraits', userTraits);
+
+                    const firstName = userTraits.name ? userTraits.name.split(' ')[0] : '';
+                    const welcome = messages.call_whatsapp.split('{{firstname}}').join(firstName);
+
+                    ws.send(JSON.stringify({
+                        type: "text",
+                        token: welcome,
+                        last: true
+                    }));
+
+                    const initialPrompt = `
+                        My name is ${firstName}.
+                        Consider my answers to following questions and recommend me something.
+                        Q1: Are you in the mood for traditional hawker fare, or a modern fusion dining experience? ${userTraits.dining_style ?? 'not answered'}.
+                        Q2: Would you prefer to shop at luxury shopping malls or discover unique budget finds at local markets? ${userTraits.shopping_preference ?? 'not answered'}.
+                        Q3: Would you like to marvel at futuristic architecture or explore Singapore’s colonial charms? ${userTraits.city_vibes ?? 'not answered'}.
+                        Q4: Do you enjoy nature or do you prefer to be in air-conditioning? ${userTraits.nature_or_confort ?? 'not answered'}.
+
+                        Other preferences and traits: '${JSON.stringify(userTraits)}';
+
+                        Please remind me why you are recommending the place or activity and make sure it is based on the previous answers, but please don't mention each answer.
+                        Please be more direct and not too long.
+                        Make sure you do not mention my name this time.
+                    `
+                    const initialResponse = await assistant.sendMessage(initialPrompt);
+                    console.log('Initial response', initialResponse)
+
+                    ws.send(JSON.stringify({
+                        type: 'text',
+                        token: initialResponse.text,
+                        last: true
+                    }));
+
+                }
+
+
+
+
                 break;
 
             case 'interrupt':
@@ -290,6 +335,15 @@ server.listen(PORT, async () => {
     console.log(`Server running at http://localhost:${PORT}/`);
 
     // const client = new twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    // const phoneNumber = encodeURIComponent('+5511933058313');
+    // console.log('phone', phoneNumber);
+
+    // const userId = 'email:lleao@twilio.com'
+
+    // const userTraits = await fetchUser(`${phoneNumber}`);
+    // console.log('userTraits', userTraits);
 
 });
+
+
 
