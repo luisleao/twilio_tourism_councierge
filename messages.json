@@ -6,5 +6,6 @@
     "ending_call": "Thank you for visiting our booth and hope you enjoy NRF Singapore! Goodbye!",
     "message_registered": "Hi {{firstname}}, are you ready to embark on an adventure? Here’s your personalised travel itinerary:\n\n{{itinerary}}\n\nSafe travels!\nThe Twilio Team",
     "message_unregistered": "Hi, it looks like you didn't set your preferences. Please access _______ and create your profile.",
-    "whatsapp_sent": "Just sent the recommendation to your WhatsApp number. Is there anything else I can help you with?"
+    "whatsapp_sent": "Just sent the recommendation to your WhatsApp number. Is there anything else I can help you with?",
+    "whatsapp_wait": "One moment. I'm sending the recommendation to you."
 }

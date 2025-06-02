@@ -182,9 +182,10 @@ wss.on('connection', (ws, req) => {
     assistant.on('send_whatsapp', async (args) => {
         // Aqui você pode implementar o envio real ou apenas logar
         console.log('Sending WhatsApp message', args);
+        await assistant.sendAssistant(messages.whatsapp_wait);
+
 
         const client = new twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-
         const newMessage = {
             from: WHATSAPP_FROM_NUMBER,
             contentSid: WHATSAPP_TEMPLATE_DEMO_SID,
