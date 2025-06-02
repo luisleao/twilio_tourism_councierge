@@ -191,7 +191,10 @@ wss.on('connection', (ws, req) => {
             // messagingServiceSid: WHATSAPP_MESSAGE_SERVICE_SID, 
             to: `whatsapp:${args.to}`,
             contentVariables: JSON.stringify({ 
-                "1": `${args.recommendation}`
+                "1": `${args.recommendation}`,
+                "2": `${args.address}`,
+                "3": `${args.price}`,
+                "4": `${args.highlights}`,
             })
         };
 
@@ -199,23 +202,17 @@ wss.on('connection', (ws, req) => {
 
         await client.messages.create(newMessage).then(s => {
             console.log('MESSAGE RETURN', s);
-        });   
-        // ws.send(JSON.stringify({
-        //     type: 'send_whatsapp',
-        //     ...args
-        // }));
+        });
+
+        await assistant.sendAssistant(messages.whatsapp_sent);
     });
 
     // Listen end_call event
-    assistant.on('end_call', (args) => {
+    assistant.on('end_call', async (args) => {
         // Aqui você pode implementar o envio real ou apenas logar
         console.log('Ending Call', args);
 
-        ws.send(JSON.stringify({
-            type: "text",
-            token: messages.ending_call,
-            last: true
-        }));
+        await assistant.sendAssistant(messages.ending_call);
         ws.send(JSON.stringify(
             {
                 "type": "end",
@@ -224,104 +221,113 @@ wss.on('connection', (ws, req) => {
         ));
     });
 
+    assistant.on('message', (message) => {
+        ws.send(JSON.stringify({
+            type: "text",
+            token: message,
+            last: true
+        }));
+    })
+
 
     ws.on('message', async (data) => {
         const message = JSON.parse(data);
-        console.log('DATA', message);
-
         switch(message.type) {
             case 'setup':
 
-                // Crie a thread após definir os números
-                await assistant.createThread();
-
-                
                 if (message.from.indexOf('whatsapp:') >= 0) {
                     phoneNumber = message.from.split('whatsapp:').join('');
                     assistant.setPhoneNumber(phoneNumber);
+
                     const userTraits = await fetchUserTraits(encodeURIComponent(phoneNumber));
                     console.log('userTraits', userTraits);
 
                     const firstName = userTraits.name ? userTraits.name.split(' ')[0] : '';
-                    const welcome = messages.call_whatsapp.split('{{firstname}}').join(firstName);
-
-                    ws.send(JSON.stringify({
-                        type: "text",
-                        token: welcome,
-                        last: true
-                    }));
-
                     const initialPrompt = `
-                        My name is ${firstName}.
-                        Consider my answers to following questions and recommend me something.
+                        Consider my answers to following questions and recommend me something:
                         Q1: Are you in the mood for traditional hawker fare, or a modern fusion dining experience? ${userTraits.dining_style ?? 'not answered'}.
                         Q2: Would you prefer to shop at luxury shopping malls or discover unique budget finds at local markets? ${userTraits.shopping_preference ?? 'not answered'}.
                         Q3: Would you like to marvel at futuristic architecture or explore Singapore’s colonial charms? ${userTraits.city_vibes ?? 'not answered'}.
                         Q4: Do you enjoy nature or do you prefer to be in air-conditioning? ${userTraits.nature_or_confort ?? 'not answered'}.
 
-                        Other preferences and traits: '${JSON.stringify(userTraits)}';
+                        If any the questions are not answered, rephrase one question and ask one by each round of conversation, but not exceed asking all of them.
+
+                        Other preferences and traits, but use those to refine the recommendation only: '${JSON.stringify(userTraits)}';
 
                         Please remind me why you are recommending the place or activity and make sure it is based on the previous answers, but please don't mention each answer.
                         Please be more direct and not too long.
-                        Make sure you do not mention my name this time.
+                        You can mention my name.
                     `
-                    const initialResponse = await assistant.sendMessage(initialPrompt);
-                    console.log('Initial response', initialResponse)
 
-                    ws.send(JSON.stringify({
-                        type: 'text',
-                        token: initialResponse.text,
-                        last: true
-                    }));
+                    let welcome = '';
+                    await assistant.createThread(initialPrompt);
+                    if (firstName) {
+                        welcome = messages.call_whatsapp_new;
+                        assistant.sendMessage(`Hi, my name is ${firstName}.`); // What's your recommendation for me?
+                    } else {
+                        welcome = messages.call_wired;
+                        // assistant.sendMessage(`Looks like part of my preferences are missing. Please start `);
+                        ws.send(JSON.stringify({
+                            type: "text",
+                            token: welcome,
+                            last: true
+                        }));
+                    }
 
+                } else {
+                    await assistant.createThread();
                 }
-
-
-
-
                 break;
+
 
             case 'interrupt':
                 await assistant.interrupt();
                 break;
 
+
+
             case 'prompt':
-                try {
-                    const response = await assistant.sendMessage(message.voicePrompt);
+                // try {
+                    await assistant.sendMessage(message.voicePrompt);
 
-                    if (response.functionCalls && response.functionCalls.length > 0) {
-                        for (const call of response.functionCalls) {
-                            if (call.function.name === 'change_language') {
-                                const args = JSON.parse(call.function.arguments);
-                                ws.send(JSON.stringify({
-                                    type: "language",
-                                    ttsLanguage: args.ttsLanguage,
-                                    transcriptionLanguage: args.transcriptionLanguage
-                                }));
-                                ws.send(JSON.stringify({
-                                    type: "text",
-                                    token: args.ttsLanguage === 'pt-BR'
-                                        ? "Sim, eu posso falar em Português"
-                                        : "Yes, we can talk in English!",
-                                    last: true
-                                }));
-                                return;
-                            }
-                        }
-                    }
+                    // if (response.functionCalls && response.functionCalls.length > 0) {
+                    //     for (const call of response.functionCalls) {
+                    //         if (call.name === 'change_language') {
+                    //             let args;
+                    //             try {
+                    //                 args = JSON.parse(call.arguments);
+                    //             } catch {
+                    //                 args = call.arguments;
+                    //             }
+                    //             ws.send(JSON.stringify({
+                    //                 type: "language",
+                    //                 ttsLanguage: args.ttsLanguage,
+                    //                 transcriptionLanguage: args.transcriptionLanguage
+                    //             }));
+                    //             ws.send(JSON.stringify({
+                    //                 type: "text",
+                    //                 token: args.ttsLanguage === 'pt-BR'
+                    //                     ? "Sim, eu posso falar em Português"
+                    //                     : "Yes, we can talk in English!",
+                    //                 last: true
+                    //             }));
+                    //             return;
+                    //         }
+                    //     }
+                    // }
 
-                    ws.send(JSON.stringify({
-                        type: 'text',
-                        token: response.text,
-                        last: true
-                    }));
-                } catch (err) {
-                    ws.send(JSON.stringify({
-                        type: 'text',
-                        token: 'Sorry, there was an error processing your request.',
-                        last: true
-                    }));
-                }
+                    // ws.send(JSON.stringify({
+                    //     type: 'text',
+                    //     token: response.text,
+                    //     last: true
+                    // }));
+                // } catch (err) {
+                //     ws.send(JSON.stringify({
+                //         type: 'text',
+                //         token: 'Sorry, there was an error processing your request.',
+                //         last: true
+                //     }));
+                // }
                 break;
             case 'dtmf':
 

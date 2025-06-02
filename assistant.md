@@ -19,6 +19,7 @@ After providing assistance, ask if you can help with anything else. If the user 
 
 
 
+TOOLS:
 
 {
   "name": "send_whatsapp",
