@@ -175,14 +175,23 @@ const wss = new WebSocket.Server({ server, path: '/websocket' });
 
 wss.on('connection', (ws, req) => {
     let phoneNumber = null;
- 
+    let sentRecommendations = [];
+
     const assistant = new ChatGPTAssistant();
 
     // Listen send_whatsapp event
     assistant.on('send_whatsapp', async (args) => {
         // Aqui você pode implementar o envio real ou apenas logar
         console.log('Sending WhatsApp message', args);
-        await assistant.sendAssistant(messages.whatsapp_wait);
+        // await assistant.sendAssistant(messages.whatsapp_wait);
+
+        // Check if recommendation already sent
+        if (sentRecommendations.some(rec => JSON.stringify(rec) === JSON.stringify(args))) {
+            console.log('Recommendation already sent, skipping Twilio message.');        
+            await assistant.sendAssistant(messages.whatsapp_already);
+            return;
+        }
+        sentRecommendations.push(args);
 
 
         const client = new twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
